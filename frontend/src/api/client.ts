@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api/v1' })
+// Use environment variable for API URL, fallback to proxy in development
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
+
+const api = axios.create({ baseURL: API_URL })
 
 export interface DashboardSummary {
   total_predictions: number
@@ -73,5 +76,34 @@ export const getPredictions = (page = 1, pageSize = 20) =>
 export const getTransaction = (id: string) => api.get<TransactionDetail>(`/dashboard/transaction/${id}`)
 export const getModels = () => api.get<ModelInfo[]>('/models')
 export const getHealth = () => api.get('/health')
+
+// Predict API
+export interface PredictRequest {
+  merchant_id: string
+  amount: number
+  payment_method: string
+  user_id_hash: string
+  ip_hash: string
+  email_domain: string
+  is_new_user: boolean
+  device_type: string
+  billing_shipping_match: boolean
+  hour_of_day: number
+  day_of_week: number
+  items_count: number
+}
+
+export interface PredictResponse {
+  transaction_id: string
+  label: string
+  confidence: number
+  threshold_used: number
+  top_features: { feature: string; contribution: number }[]
+  latency_ms: number
+  fallback_applied: boolean
+}
+
+export const predictTransaction = (data: PredictRequest) =>
+  api.post<PredictResponse>('/predict', data)
 
 export default api

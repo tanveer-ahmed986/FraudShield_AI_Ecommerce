@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: fraud-detection-api
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "./build.sh"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_SYNC
+        sync: false
+      - key: API_KEY
+        generateValue: true
+      - key: MODEL_DIR
+        value: /opt/render/project/src/models
+      - key: FRAUD_THRESHOLD
+        value: 0.10
+      - key: RATE_LIMIT_PER_SECOND
+        value: 100
+      - key: FALLBACK_AMOUNT_LIMIT
+        value: 50.0
+      - key: LOG_LEVEL
+        value: INFO
+    healthCheckPath: /api/v1/health
+    autoDeploy: true

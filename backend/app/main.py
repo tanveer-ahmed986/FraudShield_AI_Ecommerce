@@ -8,7 +8,7 @@ from app.config import settings
 from app.dependencies import engine
 from app.models.db import Base
 from app.middleware.rate_limiter import RateLimiterMiddleware
-from app.routers import health, predict, retrain, audit, dashboard, models
+from app.routers import health, predict, retrain, audit, dashboard, models, batch
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -58,9 +58,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS Configuration
+# In production, replace "*" with your Vercel frontend URL
+# Example: ["https://fraud-detection-dashboard.vercel.app"]
+allowed_origins = [
+    "http://localhost:3000",  # Local development
+    "http://localhost:5173",  # Vite dev server
+    "https://*.vercel.app",   # Vercel deployments
+    "https://*.onrender.com",  # Render deployments
+    "*"  # Allow all (remove in production)
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,3 +84,4 @@ app.include_router(retrain.router)
 app.include_router(audit.router)
 app.include_router(dashboard.router)
 app.include_router(models.router)
+app.include_router(batch.router)
