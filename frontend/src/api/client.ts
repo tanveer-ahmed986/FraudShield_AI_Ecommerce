@@ -1,9 +1,7 @@
 import axios from 'axios'
 
-// Use environment variable for API URL, fallback to proxy in development
-const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
-
-const api = axios.create({ baseURL: API_URL })
+// Use relative URL - Vercel will proxy to backend
+const api = axios.create({ baseURL: '/api/v1' })
 
 export interface DashboardSummary {
   total_predictions: number
