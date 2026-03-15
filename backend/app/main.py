@@ -59,14 +59,14 @@ app = FastAPI(
 )
 
 # CORS Configuration
-# In production, replace "*" with your Vercel frontend URL
-# Example: ["https://fraud-detection-dashboard.vercel.app"]
 allowed_origins = [
     "http://localhost:3000",  # Local development
     "http://localhost:5173",  # Vite dev server
-    "https://*.vercel.app",   # Vercel deployments
+    "https://fraud-detection-system-ecommerce.vercel.app",  # Vercel production
+    "https://fraud-detection-system-ecommerce-pvgnr79qz.vercel.app",  # Vercel preview
+    "https://*.vercel.app",   # Vercel deployments (fallback)
     "https://*.onrender.com",  # Render deployments
-    "*"  # Allow all (remove in production)
+    "*"  # Allow all (for development)
 ]
 
 app.add_middleware(
