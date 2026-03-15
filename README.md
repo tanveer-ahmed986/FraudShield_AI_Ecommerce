@@ -8,6 +8,25 @@
 
 A **production-ready, portfolio-grade** fraud detection system that protects e-commerce transactions using machine learning. Features real-time predictions, explainable AI, comprehensive analytics dashboard, and seamless WooCommerce integration.
 
+---
+
+## 🚀 Quick Start - WooCommerce Plugin
+
+**Protect your WooCommerce store in 5 minutes:**
+
+[![Download WooCommerce Plugin](https://img.shields.io/badge/Download-WooCommerce%20Plugin%20v1.0.0-blue?style=for-the-badge&logo=wordpress)](https://github.com/tanveer-ahmed986/fraud_detection_system_ecommerce/releases/download/v1.0.0-plugin/wc-fraud-detection-v1.0.0.zip)
+
+1. Download the plugin above
+2. Upload to WordPress (Plugins → Add New → Upload)
+3. Configure API endpoint
+4. Done! Real-time fraud detection is active ✅
+
+**Requirements:** WordPress 5.8+, WooCommerce 6.0+, PHP 7.4+
+
+[📖 Full Installation Guide](woocommerce-plugin/INSTALL.md) | [🛒 WooCommerce Integration](#-woocommerce-integration)
+
+---
+
 ![Dashboard Preview](docs/dashboard-preview.png)
 
 ---
@@ -375,26 +394,46 @@ curl http://localhost:8000/health
 
 ## 🛒 WooCommerce Integration
 
-### Installation
+### 📦 Download Plugin
 
-1. **Copy Plugin Files**
+**Latest Release:** [v1.0.0](https://github.com/tanveer-ahmed986/fraud_detection_system_ecommerce/releases/tag/v1.0.0-plugin)
 
-```bash
-# Copy plugin to WordPress plugins directory
-cp -r plugin/fraud-detection-woocommerce /var/www/html/wp-content/plugins/
-```
+[![Download Plugin](https://img.shields.io/badge/Download-WooCommerce%20Plugin-blue?style=for-the-badge&logo=wordpress)](https://github.com/tanveer-ahmed986/fraud_detection_system_ecommerce/releases/download/v1.0.0-plugin/wc-fraud-detection-v1.0.0.zip)
 
-2. **Activate Plugin**
-   - Go to WordPress Admin → Plugins
-   - Find "AI Fraud Detection for WooCommerce"
-   - Click "Activate"
+### Quick Installation
+
+1. **Download Plugin**
+   - Download [wc-fraud-detection-v1.0.0.zip](https://github.com/tanveer-ahmed986/fraud_detection_system_ecommerce/releases/download/v1.0.0-plugin/wc-fraud-detection-v1.0.0.zip)
+
+2. **Install in WordPress**
+   - Go to WordPress Admin → Plugins → Add New → Upload Plugin
+   - Choose the downloaded ZIP file
+   - Click "Install Now" then "Activate Plugin"
 
 3. **Configure Settings**
-   - Navigate to WooCommerce → Settings → Fraud Detection
-   - Set API URL: `http://your-backend-url:8000/api/v1`
-   - Set threshold: `0.5` (default)
-   - Choose action: "Hold for Review" or "Cancel Order"
+   - Navigate to WooCommerce → Fraud Detection
+   - Set API Endpoint: `http://localhost:8000` (or your cloud URL)
+   - Set Fraud Threshold: `0.7` (70% confidence - recommended)
+   - Enable "Auto-Hold Suspicious Orders" ✓
+   - Enable "Email Notifications" ✓
+   - Click "Test Connection" to verify
    - Save changes
+
+### Features
+
+- ✅ **Real-time fraud detection** during checkout (<200ms)
+- ✅ **Auto-hold suspicious orders** - Automatically set to "On Hold" status
+- ✅ **Email notifications** - Instant alerts when fraud is detected
+- ✅ **Explainable AI** - See top 3 contributing factors for each decision
+- ✅ **Dashboard integration** - Fraud indicators (🚨/✅/⚠️) in orders list
+- ✅ **Detailed meta box** - Full fraud analysis on order edit page
+- ✅ **Configurable threshold** - Adjust sensitivity (0.0 - 1.0)
+
+### Documentation
+
+- **Installation Guide:** [woocommerce-plugin/INSTALL.md](woocommerce-plugin/INSTALL.md)
+- **Full Documentation:** [woocommerce-plugin/README.md](woocommerce-plugin/README.md)
+- **Publishing Guide:** [woocommerce-plugin/PUBLISHING_GUIDE.md](woocommerce-plugin/PUBLISHING_GUIDE.md)
 
 ### How It Works
 
