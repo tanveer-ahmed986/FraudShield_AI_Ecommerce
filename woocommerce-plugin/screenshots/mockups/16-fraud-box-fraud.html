@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Box - Fraud Detected</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f0f1;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .meta-box {
+            background: white;
+            border: 1px solid #c3c4c7;
+            box-shadow: 0 1px 1px rgba(0,0,0,.04);
+            width: 320px;
+        }
+        .meta-box h3 {
+            font-size: 14px;
+            padding: 12px;
+            margin: 0;
+            border-bottom: 1px solid #c3c4c7;
+            background: #f6f7f7;
+            font-weight: 600;
+        }
+        .meta-box-content {
+            padding: 15px;
+        }
+        h4 {
+            font-size: 13px;
+            margin: 0 0 10px 0;
+            color: #646970;
+        }
+        p {
+            margin: 10px 0;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        p strong {
+            display: inline-block;
+            min-width: 90px;
+        }
+        .status-fraud {
+            color: #dc3232;
+            font-weight: 600;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            font-size: 11px;
+            color: #50575e;
+        }
+        ul li {
+            margin: 3px 0;
+        }
+        .latency {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f1;
+        }
+        .button {
+            background: #2271b1;
+            border-color: #2271b1;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            line-height: 2;
+            padding: 4px 12px;
+            border-radius: 3px;
+            border: 1px solid;
+            cursor: pointer;
+            width: 100%;
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+        }
+        hr {
+            margin: 10px 0;
+            border: none;
+            border-top: 1px solid #dcdcde;
+        }
+    </style>
+</head>
+<body>
+    <div class="meta-box">
+        <h3>🛡️ AI Fraud Detection</h3>
+        <div class="meta-box-content">
+            <h4>Last Check: 2025-03-17 10:30 AM</h4>
+
+            <p><strong>Status:</strong>
+                <span class="status-fraud">🚨 FRAUD DETECTED</span>
+            </p>
+
+            <p><strong>Confidence:</strong> 87.30%</p>
+
+            <p><strong>Top Factors:</strong></p>
+            <ul>
+                <li>amount: 0.35 (High amount for new customer)</li>
+                <li>email_domain: 0.28 (Disposable email)</li>
+                <li>is_new_user: 0.22 (New customer)</li>
+            </ul>
+
+            <p class="latency">
+                <strong>Latency:</strong> 152ms
+            </p>
+
+            <hr>
+
+            <button class="button">🔄 Re-check for Fraud</button>
+        </div>
+    </div>
+</body>
+</html>

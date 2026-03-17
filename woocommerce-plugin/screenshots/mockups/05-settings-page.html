@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Settings - WordPress</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            background: #f0f0f1;
+            padding: 20px;
+        }
+        .wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            box-shadow: 0 1px 1px rgba(0,0,0,.04);
+        }
+        h1 {
+            font-size: 23px;
+            font-weight: 400;
+            margin: 0 0 20px;
+            padding: 9px 0 4px;
+            line-height: 1.3;
+        }
+        .form-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .form-table th {
+            width: 200px;
+            padding: 20px 10px 20px 0;
+            text-align: left;
+            font-weight: 600;
+            vertical-align: top;
+        }
+        .form-table td {
+            padding: 15px 10px;
+            line-height: 1.3;
+            border-bottom: 1px solid #f0f0f1;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 8px 12px;
+            border: 1px solid #8c8f94;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 400px;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: #2271b1;
+            outline: none;
+            box-shadow: 0 0 0 1px #2271b1;
+        }
+        .description {
+            color: #646970;
+            font-size: 13px;
+            margin-top: 5px;
+            display: block;
+        }
+        .button {
+            background: #2271b1;
+            border-color: #2271b1;
+            color: #fff;
+            text-decoration: none;
+            text-shadow: none;
+            font-size: 13px;
+            line-height: 2.15384615;
+            min-height: 30px;
+            padding: 0 12px;
+            border-radius: 3px;
+            border: 1px solid;
+            cursor: pointer;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .button-secondary {
+            background: #f6f7f7;
+            border-color: #2271b1;
+            color: #2271b1;
+        }
+        input[type="checkbox"] {
+            margin: 0 10px 0 0;
+            vertical-align: middle;
+        }
+        label {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #dcdcde;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 20px 0 10px;
+        }
+        .notice {
+            margin: 15px 0;
+            padding: 12px;
+            border-left: 4px solid;
+            background: white;
+        }
+        .notice-success {
+            border-left-color: #00a32a;
+            background: #edfaef;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>🛡️ AI Fraud Detection Settings</h1>
+
+        <form method="post" action="options.php">
+            <table class="form-table">
+                <tr>
+                    <th><label for="wc_fraud_api_endpoint">API Endpoint</label></th>
+                    <td>
+                        <input type="text" id="wc_fraud_api_endpoint" name="wc_fraud_api_endpoint" value="http://localhost:8000" placeholder="http://localhost:8000">
+                        <p class="description">Base URL of your fraud detection API</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="wc_fraud_api_key">API Key</label></th>
+                    <td>
+                        <input type="text" id="wc_fraud_api_key" name="wc_fraud_api_key" value="" placeholder="Optional">
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="wc_fraud_threshold">Fraud Threshold</label></th>
+                    <td>
+                        <input type="number" id="wc_fraud_threshold" name="wc_fraud_threshold" value="0.7" step="0.01" min="0" max="1" style="width: 100px;">
+                        <p class="description">Confidence threshold (0.0 - 1.0)</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Automatic Detection</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wc_fraud_auto_check" value="1" checked>
+                            <strong>Enable automatic fraud detection on all new orders</strong>
+                        </label>
+                        <p class="description">Check every order automatically when placed (recommended)</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Auto-Hold Orders</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wc_fraud_auto_hold" value="1" checked>
+                            <strong>Automatically place suspicious orders on hold</strong>
+                        </label>
+                        <p class="description">Orders flagged as fraud will be held for review</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Email Alerts</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wc_fraud_email_alerts" value="1" checked>
+                            <strong>Send email alerts when fraud is detected</strong>
+                        </label>
+                        <p class="description">Notify admin at: admin@example.com</p>
+                    </td>
+                </tr>
+            </table>
+
+            <button type="submit" class="button">Save Settings</button>
+        </form>
+
+        <hr>
+
+        <h2>🔍 Test API Connection</h2>
+        <button type="button" class="button button-secondary">Test Connection</button>
+
+        <div class="notice notice-success" style="margin-top: 10px;">
+            <p>✅ <strong>Connection successful!</strong><br>
+            Status: healthy<br>
+            Model loaded: Yes</p>
+        </div>
+    </div>
+</body>
+</html>
