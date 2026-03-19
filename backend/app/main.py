@@ -20,9 +20,9 @@ app_state: dict = {}
 async def lifespan(app: FastAPI):
     logger.info("Starting up...")
 
-    # Skip table creation - tables already exist in Supabase
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+    # Create tables if they don't exist
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     # Try to load active model
     try:
