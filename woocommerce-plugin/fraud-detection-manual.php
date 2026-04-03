@@ -1,15 +1,17 @@
 <?php
 /**
- * Plugin Name: AI Fraud Detection for WooCommerce
+ * Plugin Name: Tanveer FraudShield for WooCommerce
  * Plugin URI: https://github.com/tanveer-ahmed986/fraud_detection_system_ecommerce
  * Description: AI fraud detection with manual check, CSV bulk upload, and progress indicators
- * Version: 2.2.1
+ * Version: 2.3.1
  * Author: Tanveer Ahmed
  * License: MIT
  * Requires at least: 5.8
  * Requires PHP: 7.4
+ * Requires Plugins: woocommerce
  * WC requires at least: 8.0
  * WC tested up to: 10.6
+ * Text Domain: tanveer-fraudshield-for-woocommerce
  */
 
 if (!defined('ABSPATH')) {
@@ -20,7 +22,7 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
     return;
 }
 
-class WC_AI_Fraud_Detection_Manual {
+class TFShield_Fraud_Detection {
 
     private static $instance = null;
 
@@ -35,9 +37,9 @@ class WC_AI_Fraud_Detection_Manual {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('add_meta_boxes', array($this, 'add_fraud_meta_box'));
-        add_action('admin_post_check_fraud', array($this, 'handle_manual_check'));
-        add_action('wp_ajax_check_fraud_ajax', array($this, 'handle_ajax_check'));
-        add_action('wp_ajax_process_csv_batch', array($this, 'handle_csv_batch'));
+        add_action('admin_post_tfshield_check_fraud', array($this, 'handle_manual_check'));
+        add_action('wp_ajax_tfshield_check_fraud_ajax', array($this, 'handle_ajax_check'));
+        add_action('wp_ajax_tfshield_process_csv_batch', array($this, 'handle_csv_batch'));
         add_action('admin_notices', array($this, 'show_admin_notices'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
 
@@ -52,10 +54,10 @@ class WC_AI_Fraud_Detection_Manual {
     public function add_admin_menu() {
         add_submenu_page(
             'woocommerce',
-            'AI Fraud Detection',
-            'Fraud Detection',
+            'Tanveer FraudShield',
+            '🛡️ FraudShield',
             'manage_woocommerce',
-            'wc-fraud-detection',
+            'tfshield-detection',
             array($this, 'render_settings_page')
         );
 
@@ -65,28 +67,32 @@ class WC_AI_Fraud_Detection_Manual {
             'Bulk Fraud Check (CSV)',
             'Bulk Check (CSV)',
             'manage_woocommerce',
-            'wc-fraud-bulk-check',
+            'tfshield-bulk-check',
             array($this, 'render_bulk_check_page')
         );
     }
 
     public function register_settings() {
-        register_setting('wc_fraud_detection', 'wc_fraud_api_endpoint', array(
+        register_setting('tfshield_settings', 'tfshield_api_endpoint', array(
             'sanitize_callback' => 'esc_url_raw'
         ));
-        register_setting('wc_fraud_detection', 'wc_fraud_api_key', array(
+        register_setting('tfshield_settings', 'tfshield_api_key', array(
             'sanitize_callback' => 'sanitize_text_field'
         ));
-        register_setting('wc_fraud_detection', 'wc_fraud_threshold', array(
+        register_setting('tfshield_settings', 'tfshield_currency', array(
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'USD'
+        ));
+        register_setting('tfshield_settings', 'tfshield_threshold', array(
             'sanitize_callback' => array($this, 'sanitize_threshold')
         ));
-        register_setting('wc_fraud_detection', 'wc_fraud_auto_check', array(
+        register_setting('tfshield_settings', 'tfshield_auto_check', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox')
         ));
-        register_setting('wc_fraud_detection', 'wc_fraud_auto_hold', array(
+        register_setting('tfshield_settings', 'tfshield_auto_hold', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox')
         ));
-        register_setting('wc_fraud_detection', 'wc_fraud_email_alerts', array(
+        register_setting('tfshield_settings', 'tfshield_email_alerts', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox')
         ));
     }
@@ -160,27 +166,65 @@ class WC_AI_Fraud_Detection_Manual {
                     <h2>✅ Results</h2>
                     <div style="margin-bottom: 15px;">
                         <button id="download-results" class="button button-secondary">⬇️ Download Results (CSV)</button>
-                        <button id="download-fraud-only" class="button button-secondary">⚠️ Download Fraud Only</button>
+                        <button id="download-fraud-only" class="button button-secondary">⚠️ Download High Risk Only</button>
                     </div>
                     <div id="results-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
                     <div id="results-table-container" style="overflow-x: auto;"></div>
                 </div>
             </div>
         </div>
+        <?php
+    }
 
-        <script>
+    public function show_admin_notices() {
+        $message = get_transient('tfshield_check_message');
+        if ($message) {
+            delete_transient('tfshield_check_message');
+            if ($message === 'success') {
+                echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Fraud check completed successfully!</strong></p></div>';
+            } else {
+                echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Fraud check failed. Check error logs.</strong></p></div>';
+            }
+        }
+    }
+
+    public function enqueue_scripts($hook) {
+        // Enqueue for order pages
+        if (strpos($hook, 'wc-orders') !== false || get_post_type() === 'shop_order') {
+            wp_enqueue_script('tfshield-admin', plugin_dir_url(__FILE__) . 'fraud-detection.js', array('jquery'), '2.3.1', true);
+            wp_localize_script('tfshield-admin', 'tfshieldData', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('tfshield_check_ajax')
+            ));
+        }
+
+        // Enqueue for settings page
+        if ($hook === 'woocommerce_page_tfshield-detection') {
+            wp_enqueue_script('tfshield-settings', plugin_dir_url(__FILE__) . 'settings-page.js', array('jquery'), '2.3.1', true);
+        }
+
+        // Enqueue for bulk check page
+        if ($hook === 'woocommerce_page_tfshield-bulk-check') {
+            wp_enqueue_script('tfshield-bulk-check', plugin_dir_url(__FILE__) . 'bulk-check.js', array('jquery'), '2.3.1', true);
+            wp_localize_script('tfshield-bulk-check', 'tfshieldBulkData', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('tfshield_csv_batch')
+            ));
+        }
+    }
+
+    private function enqueue_bulk_check_script_OLD() {
+        $inline_script = "
         jQuery(document).ready(function($) {
             var csvData = [];
             var results = [];
 
-            // Download template
             $('#download-template').on('click', function(e) {
                 e.preventDefault();
                 var csv = 'order_id,amount,payment_method,customer_email,is_new_customer,billing_city,items_count\\n';
                 csv += '12345,99.99,credit_card,customer@example.com,yes,New York,2\\n';
                 csv += '12346,149.50,paypal,john@test.com,no,Los Angeles,1\\n';
                 csv += '12347,250.00,credit_card,jane@example.com,yes,Chicago,5';
-
                 var blob = new Blob([csv], { type: 'text/csv' });
                 var url = URL.createObjectURL(blob);
                 var a = document.createElement('a');
@@ -189,75 +233,57 @@ class WC_AI_Fraud_Detection_Manual {
                 a.click();
             });
 
-            // Handle CSV upload
             $('#csv-upload-form').on('submit', function(e) {
                 e.preventDefault();
-
                 var fileInput = $('#csv_file')[0];
                 if (!fileInput.files.length) {
                     alert('Please select a CSV file');
                     return;
                 }
-
                 var file = fileInput.files[0];
                 var reader = new FileReader();
-
                 reader.onload = function(e) {
                     var text = e.target.result;
                     var debugHtml = '<strong>Debug Info:</strong><br>';
                     debugHtml += 'File size: ' + text.length + ' bytes<br>';
                     debugHtml += 'First 200 chars: ' + text.substring(0, 200).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '<br>';
-
                     $('#debug-info').html(debugHtml).show();
-
                     csvData = parseCSV(text);
-
                     $('#debug-info').append('Rows parsed: ' + csvData.length + '<br>');
-
                     if (csvData.length === 0) {
-                        $('#debug-info').append('<span style="color: red;">ERROR: No data rows found!</span>');
+                        $('#debug-info').append('<span style=\"color: red;\">ERROR: No data rows found!</span>');
                         alert('CSV file is empty or invalid. Check the debug info above.');
                         return;
                     }
-
-                    $('#debug-info').append('<span style="color: green;">SUCCESS: Ready to process!</span><br>');
+                    $('#debug-info').append('<span style=\"color: green;\">SUCCESS: Ready to process!</span><br>');
                     console.log('CSV parsed successfully:', csvData.length, 'transactions');
-
                     $('#upload-status').hide();
                     $('#processing-status').show();
                     $('#results-container').hide();
-
                     setTimeout(function() {
                         processBatch(0);
                     }, 1000);
                 };
-
                 reader.onerror = function(e) {
-                    $('#debug-info').html('<span style="color: red;">Error reading file!</span>').show();
+                    $('#debug-info').html('<span style=\"color: red;\">Error reading file!</span>').show();
                     alert('Error reading file: ' + e.target.error);
                 };
-
                 reader.readAsText(file);
             });
 
             function parseCSV(text) {
-                // Handle different line endings (Windows: \r\n, Unix: \n, Mac: \r)
                 text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
                 var lines = text.split('\n').filter(line => line.trim());
-
                 if (lines.length === 0) {
                     console.error('CSV has no lines');
                     return [];
                 }
-
                 var headers = lines[0].split(',').map(h => h.trim());
                 console.log('CSV Headers:', headers);
-
                 if (headers.length === 0 || !headers[0]) {
                     console.error('CSV has no headers');
                     return [];
                 }
-
                 var data = [];
                 for (var i = 1; i < lines.length; i++) {
                     var values = lines[i].split(',');
@@ -267,7 +293,6 @@ class WC_AI_Fraud_Detection_Manual {
                     }
                     data.push(row);
                 }
-
                 console.log('Parsed ' + data.length + ' rows');
                 return data;
             }
@@ -275,31 +300,26 @@ class WC_AI_Fraud_Detection_Manual {
             function processBatch(startIndex) {
                 var batchSize = 10;
                 var batch = csvData.slice(startIndex, startIndex + batchSize);
-
                 if (batch.length === 0) {
                     showResults();
                     return;
                 }
-
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: {
-                        action: 'process_csv_batch',
+                        action: 'tfshield_process_csv_batch',
                         batch: JSON.stringify(batch),
-                        nonce: '<?php echo wp_create_nonce('csv_batch'); ?>'
+                        nonce: '" . wp_create_nonce('tfshield_csv_batch') . "'
                     },
                     success: function(response) {
                         if (response.success) {
                             results = results.concat(response.data.results);
-
                             var processed = startIndex + batch.length;
                             var total = csvData.length;
                             var percent = Math.round((processed / total) * 100);
-
                             $('#progress-bar').css('width', percent + '%').text(percent + '%');
                             $('#progress-text').html('Processed ' + processed + ' of ' + total + ' transactions...<br><em>⏱️ Please wait, this process may take a few minutes.</em>');
-
                             setTimeout(function() {
                                 processBatch(startIndex + batchSize);
                             }, 500);
@@ -316,61 +336,35 @@ class WC_AI_Fraud_Detection_Manual {
             function showResults() {
                 $('#processing-status').hide();
                 $('#results-container').show();
-
-                var fraudCount = results.filter(r => r.label === 'fraud').length;
-                var legitCount = results.filter(r => r.label === 'legitimate').length;
+                var fraudCount = results.filter(r => r.label === 'HIGH RISK').length;
+                var legitCount = results.filter(r => r.label === 'LOW RISK').length;
                 var totalAmount = results.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
-                var fraudAmount = results.filter(r => r.label === 'fraud').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
-
-                $('#results-summary').html(`
-                    <div style="background: #f0f0f0; padding: 15px; border-radius: 4px;">
-                        <div style="font-size: 24px; font-weight: bold;">${results.length}</div>
-                        <div>Total Checked</div>
-                    </div>
-                    <div style="background: #fef2f2; padding: 15px; border-radius: 4px; border: 2px solid #dc3232;">
-                        <div style="font-size: 24px; font-weight: bold; color: #dc3232;">${fraudCount}</div>
-                        <div>🚨 Fraud Detected</div>
-                    </div>
-                    <div style="background: #f0fdf4; padding: 15px; border-radius: 4px; border: 2px solid #46b450;">
-                        <div style="font-size: 24px; font-weight: bold; color: #46b450;">${legitCount}</div>
-                        <div>✅ Legitimate</div>
-                    </div>
-                    <div style="background: #fff7ed; padding: 15px; border-radius: 4px; border: 2px solid #f97316;">
-                        <div style="font-size: 20px; font-weight: bold;">PKR ${fraudAmount.toFixed(2)}</div>
-                        <div>💰 Fraud Amount Caught</div>
-                    </div>
-                `);
-
-                var tableHTML = '<table class="wp-list-table widefat fixed striped"><thead><tr>';
-                tableHTML += '<th>Order ID</th><th>Amount</th><th>Result</th><th>Confidence</th><th>Top Factor</th></tr></thead><tbody>';
-
+                var fraudAmount = results.filter(r => r.label === 'HIGH RISK').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+                $('#results-summary').html(
+                    '<div style=\"background: #f0f0f0; padding: 15px; border-radius: 4px;\"><div style=\"font-size: 24px; font-weight: bold;\">' + results.length + '</div><div>Total Checked</div></div>' +
+                    '<div style=\"background: #fef2f2; padding: 15px; border-radius: 4px; border: 2px solid #dc3232;\"><div style=\"font-size: 24px; font-weight: bold; color: #dc3232;\">' + fraudCount + '</div><div>🚨 High Risk</div></div>' +
+                    '<div style=\"background: #f0fdf4; padding: 15px; border-radius: 4px; border: 2px solid #46b450;\"><div style=\"font-size: 24px; font-weight: bold; color: #46b450;\">' + legitCount + '</div><div>✅ Low Risk</div></div>' +
+                    '<div style=\"background: #fff7ed; padding: 15px; border-radius: 4px; border: 2px solid #f97316;\"><div style=\"font-size: 20px; font-weight: bold;\">PKR ' + fraudAmount.toFixed(2) + '</div><div>💰 High Risk Amount Caught</div></div>'
+                );
+                var tableHTML = '<table class=\"wp-list-table widefat fixed striped\"><thead><tr><th>Order ID</th><th>Amount</th><th>Result</th><th>Confidence</th><th>Top Factor</th></tr></thead><tbody>';
                 results.forEach(function(r) {
-                    var statusIcon = r.label === 'fraud' ? '🚨' : '✅';
-                    var statusColor = r.label === 'fraud' ? '#dc3232' : '#46b450';
+                    var statusIcon = r.label === 'HIGH RISK' ? '🚨' : '✅';
+                    var statusColor = r.label === 'HIGH RISK' ? '#dc3232' : '#46b450';
                     var confidence = (r.confidence * 100).toFixed(2) + '%';
                     var topFactor = r.top_features && r.top_features[0] ? r.top_features[0].feature : 'N/A';
-
-                    tableHTML += '<tr>';
-                    tableHTML += '<td>' + r.order_id + '</td>';
-                    tableHTML += '<td>PKR ' + parseFloat(r.amount).toFixed(2) + '</td>';
-                    tableHTML += '<td style="color: ' + statusColor + '; font-weight: bold;">' + statusIcon + ' ' + r.label.toUpperCase() + '</td>';
-                    tableHTML += '<td>' + confidence + '</td>';
-                    tableHTML += '<td><code>' + topFactor + '</code></td>';
-                    tableHTML += '</tr>';
+                    tableHTML += '<tr><td>' + r.order_id + '</td><td>PKR ' + parseFloat(r.amount).toFixed(2) + '</td><td style=\"color: ' + statusColor + '; font-weight: bold;\">' + statusIcon + ' ' + r.label + '</td><td>' + confidence + '</td><td><code>' + topFactor + '</code></td></tr>';
                 });
-
                 tableHTML += '</tbody></table>';
                 $('#results-table-container').html(tableHTML);
             }
 
-            // Download results
             $('#download-results').on('click', function() {
                 downloadCSV(results, 'fraud-check-results.csv');
             });
 
             $('#download-fraud-only').on('click', function() {
-                var fraudOnly = results.filter(r => r.label === 'fraud');
-                downloadCSV(fraudOnly, 'fraud-detected-only.csv');
+                var fraudOnly = results.filter(r => r.label === 'HIGH RISK');
+                downloadCSV(fraudOnly, 'high-risk-only.csv');
             });
 
             function downloadCSV(data, filename) {
@@ -381,7 +375,6 @@ class WC_AI_Fraud_Detection_Manual {
                     var tf3 = r.top_features && r.top_features[2] ? r.top_features[2].feature : '';
                     csv += r.order_id + ',' + r.amount + ',' + r.label + ',' + r.confidence + ',' + tf1 + ',' + tf2 + ',' + tf3 + '\\n';
                 });
-
                 var blob = new Blob([csv], { type: 'text/csv' });
                 var url = URL.createObjectURL(blob);
                 var a = document.createElement('a');
@@ -390,33 +383,14 @@ class WC_AI_Fraud_Detection_Manual {
                 a.click();
             }
         });
-        </script>
-        <?php
-    }
-
-    public function show_admin_notices() {
-        $message = get_transient('wc_fraud_check_message');
-        if ($message) {
-            delete_transient('wc_fraud_check_message');
-            if ($message === 'success') {
-                echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Fraud check completed successfully!</strong></p></div>';
-            } else {
-                echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Fraud check failed. Check error logs.</strong></p></div>';
-            }
-        }
-    }
-
-    public function enqueue_scripts($hook) {
-        if (strpos($hook, 'wc-orders') !== false || get_post_type() === 'shop_order') {
-            wp_enqueue_script('wc-fraud-detection', plugin_dir_url(__FILE__) . 'fraud-detection.js', array('jquery'), '2.0.0', true);
-            wp_localize_script('wc-fraud-detection', 'wcFraudDetection', array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('fraud_check_ajax')
-            ));
-        }
+        ";
+        wp_add_inline_script('jquery', $inline_script);
     }
 
     public function handle_ajax_check() {
+        // Verify nonce for security
+        check_ajax_referer('tfshield_check_ajax', 'nonce');
+
         // Get order
         $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
         if (!$order_id) {
@@ -434,21 +408,45 @@ class WC_AI_Fraud_Detection_Manual {
         $order->add_order_note('🔄 Starting fraud check...', false, true);
 
         // Get settings
-        $api_endpoint = get_option('wc_fraud_api_endpoint', 'http://localhost:8000');
+        $api_endpoint = get_option('tfshield_api_endpoint', 'http://localhost:8000');
+        $currency = get_option('tfshield_currency', 'USD');
 
-        // Prepare simple transaction data
+        // Extract real order data
+        $customer_id = $order->get_customer_id();
+        $billing_email = $order->get_billing_email();
+        $email_domain = $billing_email ? substr(strrchr($billing_email, '@'), 1) : 'unknown';
+
+        // Check if new customer (0 or 1 previous orders)
+        $customer_order_count = 0;
+        if ($customer_id) {
+            $customer_order_count = wc_get_customer_order_count($customer_id);
+        }
+        $is_new_user = ($customer_order_count <= 1);
+
+        // Get order date/time
+        $order_date = $order->get_date_created();
+        $hour_of_day = $order_date ? intval($order_date->format('G')) : 12;
+        $day_of_week = $order_date ? (intval($order_date->format('N')) - 1) : 1;
+
+        // Compare billing and shipping addresses
+        $billing_address = $order->get_billing_address_1() . $order->get_billing_city();
+        $shipping_address = $order->get_shipping_address_1() . $order->get_shipping_city();
+        $billing_shipping_match = ($billing_address === $shipping_address);
+
+        // Prepare transaction data with REAL order information
         $transaction_data = array(
             'merchant_id' => get_bloginfo('name'),
             'amount' => floatval($order->get_total()),
+            'currency' => $currency,
             'payment_method' => $order->get_payment_method() ?: 'unknown',
-            'user_id_hash' => 'test_user',
-            'ip_hash' => 'test_ip',
-            'email_domain' => 'test.com',
-            'is_new_user' => true,
-            'device_type' => 'unknown',
-            'billing_shipping_match' => true,
-            'hour_of_day' => 12,
-            'day_of_week' => 1,
+            'user_id_hash' => 'customer_' . ($customer_id ?: 'guest'),
+            'ip_hash' => $order->get_customer_ip_address() ?: 'unknown',
+            'email_domain' => $email_domain,
+            'is_new_user' => $is_new_user,
+            'device_type' => 'unknown',  // WooCommerce doesn't track this
+            'billing_shipping_match' => $billing_shipping_match,
+            'hour_of_day' => $hour_of_day,
+            'day_of_week' => $day_of_week,
             'items_count' => $order->get_item_count()
         );
 
@@ -478,13 +476,13 @@ class WC_AI_Fraud_Detection_Manual {
             $order->save();
 
             // Add success note
-            $is_fraud = ($fraud_result['label'] === 'fraud');
+            $is_high_risk = ($fraud_result['label'] === 'HIGH RISK');
             $confidence = isset($fraud_result['confidence']) ? ($fraud_result['confidence'] * 100) : 0;
 
             $order->add_order_note(
                 sprintf(
                     '🛡️ %s (Confidence: %.2f%%)',
-                    $is_fraud ? '🚨 FRAUD' : '✅ Legitimate',
+                    $is_high_risk ? '🚨 HIGH RISK' : '✅ LOW RISK',
                     $confidence
                 ),
                 false,
@@ -501,32 +499,47 @@ class WC_AI_Fraud_Detection_Manual {
     public function render_settings_page() {
         ?>
         <div class="wrap">
-            <h1>🛡️ AI Fraud Detection Settings</h1>
+            <h1>🛡️ Tanveer FraudShield Settings</h1>
             <form method="post" action="options.php">
-                <?php settings_fields('wc_fraud_detection'); ?>
+                <?php settings_fields('tfshield_settings'); ?>
                 <table class="form-table">
                     <tr>
-                        <th><label for="wc_fraud_api_endpoint">API Endpoint</label></th>
+                        <th><label for="tfshield_api_endpoint">API Endpoint</label></th>
                         <td>
-                            <input type="text" id="wc_fraud_api_endpoint" name="wc_fraud_api_endpoint"
-                                   value="<?php echo esc_attr(get_option('wc_fraud_api_endpoint', 'http://localhost:8000')); ?>"
+                            <input type="text" id="tfshield_api_endpoint" name="tfshield_api_endpoint"
+                                   value="<?php echo esc_attr(get_option('tfshield_api_endpoint', 'http://localhost:8000')); ?>"
                                    class="regular-text" placeholder="http://localhost:8000">
                             <p class="description">Base URL of your fraud detection API</p>
                         </td>
                     </tr>
                     <tr>
-                        <th><label for="wc_fraud_api_key">API Key</label></th>
+                        <th><label for="tfshield_api_key">API Key</label></th>
                         <td>
-                            <input type="text" id="wc_fraud_api_key" name="wc_fraud_api_key"
-                                   value="<?php echo esc_attr(get_option('wc_fraud_api_key', '')); ?>"
+                            <input type="text" id="tfshield_api_key" name="tfshield_api_key"
+                                   value="<?php echo esc_attr(get_option('tfshield_api_key', '')); ?>"
                                    class="regular-text" placeholder="Optional">
                         </td>
                     </tr>
                     <tr>
-                        <th><label for="wc_fraud_threshold">Fraud Threshold</label></th>
+                        <th><label for="tfshield_currency">Store Currency</label></th>
                         <td>
-                            <input type="number" id="wc_fraud_threshold" name="wc_fraud_threshold"
-                                   value="<?php echo esc_attr(get_option('wc_fraud_threshold', '0.7')); ?>"
+                            <select id="tfshield_currency" name="tfshield_currency" class="regular-text">
+                                <option value="USD" <?php selected(get_option('tfshield_currency', 'USD'), 'USD'); ?>>USD - US Dollar ($)</option>
+                                <option value="PKR" <?php selected(get_option('tfshield_currency', 'USD'), 'PKR'); ?>>PKR - Pakistani Rupee (Rs.)</option>
+                                <option value="INR" <?php selected(get_option('tfshield_currency', 'USD'), 'INR'); ?>>INR - Indian Rupee (₹)</option>
+                                <option value="EUR" <?php selected(get_option('tfshield_currency', 'USD'), 'EUR'); ?>>EUR - Euro (€)</option>
+                                <option value="GBP" <?php selected(get_option('tfshield_currency', 'USD'), 'GBP'); ?>>GBP - British Pound (£)</option>
+                                <option value="CAD" <?php selected(get_option('tfshield_currency', 'USD'), 'CAD'); ?>>CAD - Canadian Dollar (C$)</option>
+                                <option value="AUD" <?php selected(get_option('tfshield_currency', 'USD'), 'AUD'); ?>>AUD - Australian Dollar (A$)</option>
+                            </select>
+                            <p class="description">Select your store's currency for accurate fraud detection</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="tfshield_threshold">Fraud Threshold</label></th>
+                        <td>
+                            <input type="number" id="tfshield_threshold" name="tfshield_threshold"
+                                   value="<?php echo esc_attr(get_option('tfshield_threshold', '0.7')); ?>"
                                    step="0.01" min="0" max="1" class="small-text">
                             <p class="description">Confidence threshold (0.0 - 1.0)</p>
                         </td>
@@ -535,8 +548,8 @@ class WC_AI_Fraud_Detection_Manual {
                         <th>Automatic Detection</th>
                         <td>
                             <label>
-                                <input type="checkbox" name="wc_fraud_auto_check" value="1"
-                                       <?php checked(get_option('wc_fraud_auto_check', '1'), '1'); ?>>
+                                <input type="checkbox" name="tfshield_auto_check" value="1"
+                                       <?php checked(get_option('tfshield_auto_check', '1'), '1'); ?>>
                                 <strong>Enable automatic fraud detection on all new orders</strong>
                             </label>
                             <p class="description">Check every order automatically when placed (recommended)</p>
@@ -546,8 +559,8 @@ class WC_AI_Fraud_Detection_Manual {
                         <th>Auto-Hold Orders</th>
                         <td>
                             <label>
-                                <input type="checkbox" name="wc_fraud_auto_hold" value="1"
-                                       <?php checked(get_option('wc_fraud_auto_hold', '1'), '1'); ?>>
+                                <input type="checkbox" name="tfshield_auto_hold" value="1"
+                                       <?php checked(get_option('tfshield_auto_hold', '1'), '1'); ?>>
                                 <strong>Automatically place suspicious orders on hold</strong>
                             </label>
                             <p class="description">Orders flagged as fraud will be held for review</p>
@@ -557,8 +570,8 @@ class WC_AI_Fraud_Detection_Manual {
                         <th>Email Alerts</th>
                         <td>
                             <label>
-                                <input type="checkbox" name="wc_fraud_email_alerts" value="1"
-                                       <?php checked(get_option('wc_fraud_email_alerts', '1'), '1'); ?>>
+                                <input type="checkbox" name="tfshield_email_alerts" value="1"
+                                       <?php checked(get_option('tfshield_email_alerts', '1'), '1'); ?>>
                                 <strong>Send email alerts when fraud is detected</strong>
                             </label>
                             <p class="description">Notify admin at: <?php echo esc_html(get_option('admin_email')); ?></p>
@@ -571,36 +584,14 @@ class WC_AI_Fraud_Detection_Manual {
             <hr>
 
             <h2>🔍 Test API Connection</h2>
-            <button type="button" class="button button-secondary" id="test-api-connection">Test Connection</button>
-            <div id="api-test-result" style="margin-top: 10px;"></div>
-
-            <script type="text/javascript">
-            jQuery(document).ready(function($) {
-                $('#test-api-connection').on('click', function() {
-                    var endpoint = $('#wc_fraud_api_endpoint').val();
-                    var resultDiv = $('#api-test-result');
-                    resultDiv.html('<p>Testing connection...</p>');
-
-                    $.ajax({
-                        url: endpoint + '/api/v1/health',
-                        method: 'GET',
-                        timeout: 10000,
-                        success: function(response) {
-                            resultDiv.html('<div class="notice notice-success"><p>✅ <strong>Connection successful!</strong><br>Status: ' + response.status + '<br>Model loaded: ' + (response.model_loaded ? 'Yes' : 'No') + '</p></div>');
-                        },
-                        error: function(xhr, status, error) {
-                            resultDiv.html('<div class="notice notice-error"><p>❌ <strong>Connection failed!</strong><br>Error: ' + error + '</p></div>');
-                        }
-                    });
-                });
-            });
-            </script>
+            <button type="button" class="button button-secondary" id="tfshield-test-api">Test Connection</button>
+            <div id="tfshield-api-result" style="margin-top: 10px;"></div>
         </div>
         <?php
     }
 
     public function handle_csv_batch() {
-        check_ajax_referer('csv_batch', 'nonce');
+        check_ajax_referer('tfshield_csv_batch', 'nonce');
 
         $batch_json = isset($_POST['batch']) ? stripslashes($_POST['batch']) : '';
         $batch = json_decode($batch_json, true);
@@ -610,7 +601,7 @@ class WC_AI_Fraud_Detection_Manual {
             return;
         }
 
-        $api_endpoint = get_option('wc_fraud_api_endpoint', 'http://localhost:8000');
+        $api_endpoint = get_option('tfshield_api_endpoint', 'http://localhost:8000');
         $results = array();
 
         foreach ($batch as $row) {
@@ -618,6 +609,7 @@ class WC_AI_Fraud_Detection_Manual {
             $transaction_data = array(
                 'merchant_id' => get_bloginfo('name'),
                 'amount' => floatval($row['amount'] ?? 0),
+                'currency' => get_option('tfshield_currency', 'USD'),  // Use setting
                 'payment_method' => $row['payment_method'] ?? 'unknown',
                 'user_id_hash' => 'csv_' . ($row['order_id'] ?? 'unknown'),
                 'ip_hash' => 'csv_upload',
@@ -667,7 +659,7 @@ class WC_AI_Fraud_Detection_Manual {
         }
 
         // Check if automatic detection is enabled
-        $auto_enabled = get_option('wc_fraud_auto_check', '1');
+        $auto_enabled = get_option('tfshield_auto_check', '1');
         error_log('Auto-check enabled setting: ' . $auto_enabled);
         if ($auto_enabled !== '1') {
             error_log('Auto-check: Disabled in settings');
@@ -705,28 +697,45 @@ class WC_AI_Fraud_Detection_Manual {
             $order->add_order_note('🤖 Automatic fraud detection running...', false, false);
 
         // Get settings
-        $api_endpoint = get_option('wc_fraud_api_endpoint', 'http://localhost:8000');
-        $threshold = floatval(get_option('wc_fraud_threshold', 0.7));
+        $api_endpoint = get_option('tfshield_api_endpoint', 'http://localhost:8000');
+        $threshold = floatval(get_option('tfshield_threshold', 0.7));
+        $currency = get_option('tfshield_currency', 'USD');
 
-        // Prepare transaction data (simplified for reliability)
+        // Extract real order data
+        $customer_id = $order->get_customer_id();
         $billing_email = $order->get_billing_email();
         $email_domain = $billing_email ? substr(strrchr($billing_email, '@'), 1) : 'unknown';
-        if (!$email_domain) {
-            $email_domain = 'unknown';
+
+        // Check if new customer
+        $customer_order_count = 0;
+        if ($customer_id) {
+            $customer_order_count = wc_get_customer_order_count($customer_id);
         }
+        $is_new_user = ($customer_order_count <= 1);
+
+        // Get order date/time
+        $order_date = $order->get_date_created();
+        $hour_of_day = $order_date ? intval($order_date->format('G')) : intval(current_time('G'));
+        $day_of_week = $order_date ? (intval($order_date->format('N')) - 1) : (intval(current_time('N')) - 1);
+
+        // Compare addresses
+        $billing_address = $order->get_billing_address_1() . $order->get_billing_city();
+        $shipping_address = $order->get_shipping_address_1() . $order->get_shipping_city();
+        $billing_shipping_match = ($billing_address === $shipping_address);
 
         $transaction_data = array(
             'merchant_id' => get_bloginfo('name'),
             'amount' => floatval($order->get_total()),
+            'currency' => $currency,
             'payment_method' => $order->get_payment_method() ?: 'unknown',
-            'user_id_hash' => 'customer_' . ($order->get_customer_id() ?: 'guest'),
-            'ip_hash' => 'ip_hash',
+            'user_id_hash' => 'customer_' . ($customer_id ?: 'guest'),
+            'ip_hash' => $order->get_customer_ip_address() ?: 'unknown',
             'email_domain' => $email_domain,
-            'is_new_user' => true,
+            'is_new_user' => $is_new_user,
             'device_type' => 'unknown',
-            'billing_shipping_match' => true,
-            'hour_of_day' => intval(current_time('G')),
-            'day_of_week' => intval(current_time('N')) - 1,
+            'billing_shipping_match' => $billing_shipping_match,
+            'hour_of_day' => $hour_of_day,
+            'day_of_week' => $day_of_week,
             'items_count' => $order->get_item_count()
         );
 
@@ -763,21 +772,21 @@ class WC_AI_Fraud_Detection_Manual {
         if ($fraud_result && isset($fraud_result['label'])) {
             error_log('Auto-check: Got valid result - ' . $fraud_result['label']);
 
-            $is_fraud = ($fraud_result['label'] === 'fraud');
+            $is_high_risk = ($fraud_result['label'] === 'HIGH RISK');
             $confidence = isset($fraud_result['confidence']) ? ($fraud_result['confidence'] * 100) : 0;
 
-            error_log('Auto-check: is_fraud=' . ($is_fraud ? 'true' : 'false') . ', confidence=' . $confidence);
+            error_log('Auto-check: is_high_risk=' . ($is_high_risk ? 'true' : 'false') . ', confidence=' . $confidence);
 
             // Add result note FIRST (before save operations)
             // Check if fraud detected
-            if ($is_fraud || $confidence >= ($threshold * 100)) {
-                // FRAUD DETECTED!
-                $auto_hold_enabled = get_option('wc_fraud_auto_hold', '1') === '1';
-                $email_alerts_enabled = get_option('wc_fraud_email_alerts', '1') === '1';
+            if ($is_high_risk || $confidence >= ($threshold * 100)) {
+                // HIGH RISK DETECTED!
+                $auto_hold_enabled = get_option('tfshield_auto_hold', '1') === '1';
+                $email_alerts_enabled = get_option('tfshield_email_alerts', '1') === '1';
 
                 $order->add_order_note(
                     sprintf(
-                        '🚨 <strong>FRAUD DETECTED!</strong> Confidence: %.2f%%%s',
+                        '🚨 <strong>HIGH RISK DETECTED!</strong> Confidence: %.2f%%%s',
                         $confidence,
                         $auto_hold_enabled ? ' - Order automatically placed on hold.' : ''
                     ),
@@ -787,7 +796,7 @@ class WC_AI_Fraud_Detection_Manual {
 
                 // Auto-hold the order (if enabled)
                 if ($auto_hold_enabled && $order->get_status() !== 'on-hold') {
-                    $order->update_status('on-hold', '🚨 Automatically held due to fraud detection');
+                    $order->update_status('on-hold', '🚨 Automatically held due to high risk detection');
                 }
 
                 // Send email notification to admin (if enabled)
@@ -796,16 +805,16 @@ class WC_AI_Fraud_Detection_Manual {
                 }
 
             } else {
-                // Legitimate
+                // Low Risk
                 $order->add_order_note(
                     sprintf(
-                        '✅ Fraud check passed (Confidence: %.2f%%)',
+                        '✅ Risk check passed - LOW RISK (Confidence: %.2f%%)',
                         $confidence
                     ),
                     false,
                     false
                 );
-                error_log('Auto-check: Added legitimate note');
+                error_log('Auto-check: Added low risk note');
             }
 
             // Save results to meta (AFTER notes)
@@ -853,8 +862,8 @@ class WC_AI_Fraud_Detection_Manual {
 
     public function add_fraud_meta_box() {
         add_meta_box(
-            'wc_fraud_detection_manual',
-            '🛡️ AI Fraud Detection',
+            'tfshield_fraud_detection',
+            '🛡️ FraudShield',
             array($this, 'render_fraud_meta_box'),
             'woocommerce_page_wc-orders',
             'side',
@@ -863,8 +872,8 @@ class WC_AI_Fraud_Detection_Manual {
 
         // Also add for legacy post-based orders
         add_meta_box(
-            'wc_fraud_detection_manual',
-            '🛡️ AI Fraud Detection',
+            'tfshield_fraud_detection',
+            '🛡️ FraudShield',
             array($this, 'render_fraud_meta_box'),
             'shop_order',
             'side',
@@ -896,10 +905,10 @@ class WC_AI_Fraud_Detection_Manual {
                 <h4 style="margin-top:0;">Last Check: <?php echo esc_html($checked_time); ?></h4>
 
                 <p><strong>Status:</strong>
-                    <?php if ($fraud_result['label'] === 'fraud'): ?>
-                        <span style="color: #dc3232;">🚨 FRAUD DETECTED</span>
+                    <?php if ($fraud_result['label'] === 'HIGH RISK'): ?>
+                        <span style="color: #dc3232;">🚨 HIGH RISK</span>
                     <?php else: ?>
-                        <span style="color: #46b450;">✅ Legitimate</span>
+                        <span style="color: #46b450;">✅ LOW RISK</span>
                     <?php endif; ?>
                 </p>
 
@@ -944,7 +953,7 @@ class WC_AI_Fraud_Detection_Manual {
             wp_die('Invalid order ID');
         }
 
-        check_admin_referer('check_fraud_' . $order_id);
+        check_admin_referer('tfshield_check_fraud_' . $order_id);
         error_log('Nonce verified');
 
         $order = wc_get_order($order_id);
@@ -954,8 +963,8 @@ class WC_AI_Fraud_Detection_Manual {
         }
 
         // Get settings
-        $api_endpoint = get_option('wc_fraud_api_endpoint', 'http://localhost:8000');
-        $api_key = get_option('wc_fraud_api_key', '');
+        $api_endpoint = get_option('tfshield_api_endpoint', 'http://localhost:8000');
+        $api_key = get_option('tfshield_api_key', '');
         error_log('API Endpoint: ' . $api_endpoint);
 
         // Add immediate order note to show button was clicked
@@ -979,8 +988,8 @@ class WC_AI_Fraud_Detection_Manual {
             // Add order note
             $order->add_order_note(
                 sprintf(
-                    '🛡️ Fraud check completed: %s (Confidence: %.2f%%)',
-                    $fraud_result['label'] === 'fraud' ? '🚨 FRAUD' : '✅ Legitimate',
+                    '🛡️ Risk check completed: %s (Confidence: %.2f%%)',
+                    $fraud_result['label'] === 'HIGH RISK' ? '🚨 HIGH RISK' : '✅ LOW RISK',
                     $fraud_result['confidence'] * 100
                 ),
                 false,
@@ -989,11 +998,11 @@ class WC_AI_Fraud_Detection_Manual {
             error_log('Order note added - SUCCESS');
 
             // Set admin notice
-            set_transient('wc_fraud_check_message', 'success', 30);
+            set_transient('tfshield_check_message', 'success', 30);
         } else {
             error_log('ERROR: API call failed or invalid response');
             $order->add_order_note('❌ Fraud check failed - API error', false, true);
-            set_transient('wc_fraud_check_message', 'error', 30);
+            set_transient('tfshield_check_message', 'error', 30);
         }
 
         // Redirect back
@@ -1081,4 +1090,4 @@ class WC_AI_Fraud_Detection_Manual {
     }
 }
 
-WC_AI_Fraud_Detection_Manual::get_instance();
+TFShield_Fraud_Detection::get_instance();

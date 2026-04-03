@@ -238,7 +238,7 @@ async def predict(transaction: Transaction):
         fraud_prob = float(probability[1])
 
         # Label
-        label = "fraud" if prediction == 1 else "legitimate"
+        label = "HIGH RISK" if prediction == 1 else "LOW RISK"
 
         # Top features
         top_features = get_top_features(features[0])
