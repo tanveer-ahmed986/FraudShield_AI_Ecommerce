@@ -5,6 +5,7 @@
  * Description: AI fraud detection with manual check, CSV bulk upload, and progress indicators
  * Version: 2.3.1
  * Author: Tanveer Ahmed
+ * Author URI: mailto:tanveer030402@gmail.com
  * License: MIT
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -606,19 +607,20 @@ class TFShield_Fraud_Detection {
 
         foreach ($batch as $row) {
             // Prepare transaction data from CSV row
+            // Use CSV columns directly if available, fallback to defaults
             $transaction_data = array(
-                'merchant_id' => get_bloginfo('name'),
+                'merchant_id' => $row['merchant_id'] ?? get_bloginfo('name'),
                 'amount' => floatval($row['amount'] ?? 0),
-                'currency' => get_option('tfshield_currency', 'USD'),  // Use setting
+                'currency' => $row['currency'] ?? get_option('tfshield_currency', 'USD'),
                 'payment_method' => $row['payment_method'] ?? 'unknown',
-                'user_id_hash' => 'csv_' . ($row['order_id'] ?? 'unknown'),
-                'ip_hash' => 'csv_upload',
-                'email_domain' => isset($row['customer_email']) ? substr(strrchr($row['customer_email'], '@'), 1) : 'unknown',
-                'is_new_user' => ($row['is_new_customer'] ?? 'no') === 'yes',
-                'device_type' => 'unknown',
-                'billing_shipping_match' => true,
-                'hour_of_day' => 12,
-                'day_of_week' => 1,
+                'user_id_hash' => $row['user_id_hash'] ?? ('csv_' . ($row['order_id'] ?? 'unknown')),
+                'ip_hash' => $row['ip_hash'] ?? 'csv_upload',
+                'email_domain' => $row['email_domain'] ?? (isset($row['customer_email']) ? substr(strrchr($row['customer_email'], '@'), 1) : 'unknown'),
+                'is_new_user' => isset($row['is_new_user']) ? (strtolower($row['is_new_user']) === 'true' || $row['is_new_user'] === '1') : (($row['is_new_customer'] ?? 'no') === 'yes'),
+                'device_type' => $row['device_type'] ?? 'unknown',
+                'billing_shipping_match' => isset($row['billing_shipping_match']) ? (strtolower($row['billing_shipping_match']) === 'true' || $row['billing_shipping_match'] === '1') : true,
+                'hour_of_day' => isset($row['hour_of_day']) ? intval($row['hour_of_day']) : 12,
+                'day_of_week' => isset($row['day_of_week']) ? intval($row['day_of_week']) : 1,
                 'items_count' => intval($row['items_count'] ?? 1)
             );
 
