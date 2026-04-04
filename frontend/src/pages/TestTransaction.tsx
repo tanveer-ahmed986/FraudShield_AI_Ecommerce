@@ -231,7 +231,7 @@ export default function TestTransaction() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Risk Assessment Card */}
               <div style={{
-                background: result.label === 'fraud' ? '#ff7675' : '#00b894',
+                background: result.label === 'HIGH RISK' ? '#ff7675' : '#00b894',
                 color: '#fff',
                 padding: '24px',
                 borderRadius: '8px',
@@ -241,7 +241,7 @@ export default function TestTransaction() {
                   Risk Assessment
                 </div>
                 <div style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px' }}>
-                  {result.label === 'fraud' ? '⚠️ HIGH RISK' : '✅ LOW RISK'}
+                  {result.label === 'HIGH RISK' ? '⚠️ HIGH RISK' : '✅ LOW RISK'}
                 </div>
                 <div style={{ fontSize: '16px', opacity: 0.95, marginBottom: '8px' }}>
                   Risk Score: {(result.confidence * 100).toFixed(1)}%
@@ -253,7 +253,7 @@ export default function TestTransaction() {
                   paddingTop: '12px',
                   marginTop: '8px'
                 }}>
-                  {result.label === 'fraud'
+                  {result.label === 'HIGH RISK'
                     ? 'Suspicious patterns detected - Review recommended'
                     : 'Transaction appears safe to process'
                   }
@@ -304,19 +304,19 @@ export default function TestTransaction() {
 
               {/* Recommended Actions */}
               <div style={{
-                background: result.label === 'fraud' ? '#fff3cd' : '#d4edda',
+                background: result.label === 'HIGH RISK' ? '#fff3cd' : '#d4edda',
                 padding: '16px',
                 borderRadius: '8px',
-                border: result.label === 'fraud' ? '1px solid #ffc107' : '1px solid #28a745',
+                border: result.label === 'HIGH RISK' ? '1px solid #ffc107' : '1px solid #28a745',
                 fontSize: '13px',
                 lineHeight: 1.6,
                 color: '#212529',
               }}>
                 <strong style={{ fontSize: '14px' }}>
-                  {result.label === 'fraud' ? '⚠️ Recommended Action' : '✓ Recommended Action'}
+                  {result.label === 'HIGH RISK' ? '⚠️ Recommended Action' : '✓ Recommended Action'}
                 </strong>
                 <div style={{ marginTop: '8px' }}>
-                  {result.label === 'fraud' ? (
+                  {result.label === 'HIGH RISK' ? (
                     <>
                       <strong>Hold for Manual Review</strong>
                       <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>

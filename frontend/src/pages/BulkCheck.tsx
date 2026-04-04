@@ -609,11 +609,11 @@ merchant_003,45.99,USD,debit_card,user789hash,172.16.0.1hash,outlook.com,false,t
                                 fontSize: '12px',
                                 fontWeight: '600',
                                 background:
-                                  pred.label.toLowerCase() === 'fraud' ? '#fef2f2' : '#f0fdf4',
-                                color: pred.label.toLowerCase() === 'fraud' ? '#dc2626' : '#10b981',
+                                  pred.label === 'HIGH RISK' ? '#fef2f2' : '#f0fdf4',
+                                color: pred.label === 'HIGH RISK' ? '#dc2626' : '#10b981',
                               }}
                             >
-                              {pred.label.toLowerCase() === 'fraud' ? 'HIGH RISK' : 'LOW RISK'}
+                              {pred.label}
                             </span>
                           </td>
                           <td style={{ padding: '12px 16px', fontSize: '14px' }}>
